@@ -122,6 +122,50 @@ npm run dev
 
 ---
 
+## Stored Procedure 設計 / Stored Procedure Design
+
+全部資料庫操作皆透過 Stored Procedure 執行，共 14 支，定義於 `backend/DB/stored_procedures.sql`。
+
+All database operations are executed through Stored Procedures (14 total), defined in `backend/DB/stored_procedures.sql`.
+
+| Stored Procedure | 用途 |
+|-----------------|------|
+| `sp_create_user` | 新增使用者 |
+| `sp_find_user_by_phone` | 以手機號碼查詢使用者（登入用） |
+| `sp_get_user_by_id` | 以 ID 查詢使用者 |
+| `sp_update_user` | 更新使用者個人資料 |
+| `sp_create_post` | 新增貼文 |
+| `sp_get_posts` | 取得所有貼文（JOIN User 取得姓名與頭像，依時間倒序） |
+| `sp_get_post_by_id` | 以 ID 查詢單筆貼文（授權驗證用） |
+| `sp_update_post` | 更新貼文內容 |
+| `sp_delete_post` | 刪除貼文 |
+| `sp_create_comment` | 新增留言 |
+| `sp_get_comments_by_post` | 取得指定貼文的留言（JOIN User 取得留言者姓名，依時間正序） |
+| `sp_get_comment_by_id` | 以 ID 查詢單筆留言（授權驗證用） |
+| `sp_update_comment` | 更新留言內容 |
+| `sp_delete_comment` | 刪除留言 |
+
+**Java 呼叫方式 / How SP is called from Java（JdbcTemplate）：**
+
+```java
+// Repository 層範例：呼叫 sp_get_posts
+public List<Post> findAllPosts() {
+    return jdbcTemplate.query("CALL sp_get_posts()", postMapper);
+}
+
+// 帶參數範例：呼叫 sp_create_post
+public void createPost(Post post) {
+    jdbcTemplate.update("CALL sp_create_post(?, ?, ?)",
+        post.getUserId(), post.getContent(), post.getImage());
+}
+```
+
+所有參數皆以 `?` 佔位符傳入，由 JdbcTemplate 底層的 PreparedStatement 處理，從語法層面防止 SQL Injection。
+
+All parameters are passed as `?` placeholders handled by JdbcTemplate's PreparedStatement, preventing SQL Injection at the syntax level.
+
+---
+
 ## API 端點 / API Endpoints
 
 | 方法 | 路徑 | 說明 | 需驗證 |
