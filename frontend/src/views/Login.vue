@@ -1,31 +1,30 @@
 <template>
-  <div class="auth-box">
-    <h2>登入</h2>
-    <form @submit.prevent="login">
-      <div>
-        <label>手機號碼</label>
-        <!-- 固定顯示「09」前綴，使用者只輸入後 8 碼 -->
-        <div class="phone-row">
-          <span class="phone-prefix">09</span>
-          <input v-model="phoneSuffix" type="tel" maxlength="8" placeholder="12345678" required />
-        </div>
-      </div>
+  <div class="auth-wrap">
+    <el-card class="auth-card">
+      <h2 class="title">登入</h2>
+      <el-form @submit.prevent="login">
+        <el-form-item label="手機號碼">
+          <!-- 固定顯示「09」前綴，使用者只輸入後 8 碼 -->
+          <el-input v-model="phoneSuffix" maxlength="8" placeholder="12345678" type="tel">
+            <template #prepend>09</template>
+          </el-input>
+        </el-form-item>
 
-      <div>
-        <label>密碼</label>
-        <!-- showPassword 控制顯示或遮罩，type="button" 避免觸發表單提交 -->
-        <div class="pw-row">
-          <input v-model="form.password" :type="showPassword ? 'text' : 'password'" required />
-          <button type="button" class="eye-btn" @click="showPassword = !showPassword">
-            {{ showPassword ? '🙈' : '👁' }}
-          </button>
-        </div>
-      </div>
+        <el-form-item label="密碼">
+          <!-- showPassword 控制顯示明文或遮罩，type="button" 避免觸發表單提交 -->
+          <el-input
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            :suffix-icon="showPassword ? 'Hide' : 'View'"
+            @click-suffix="showPassword = !showPassword"
+          />
+        </el-form-item>
 
-      <button type="submit">登入</button>
-      <p v-if="message" class="error">{{ message }}</p>
-    </form>
-    <p>還沒有帳號？<router-link to="/register">立即註冊</router-link></p>
+        <el-button type="primary" style="width:100%" native-type="submit" @click="login">登入</el-button>
+        <el-alert v-if="message" :title="message" type="error" show-icon :closable="false" style="margin-top:12px" />
+      </el-form>
+      <p class="link">還沒有帳號？<router-link to="/register">立即註冊</router-link></p>
+    </el-card>
   </div>
 </template>
 
@@ -69,39 +68,23 @@ export default {
 </script>
 
 <style scoped>
-.auth-box {
-  max-width: 400px;
-  margin: 40px auto;
-  padding: 24px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+.auth-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 40px;
 }
-form > div { margin-bottom: 12px; }
-label { display: block; margin-bottom: 4px; }
-input { width: 100%; padding: 8px; box-sizing: border-box; }
-button[type="submit"] { width: 100%; padding: 10px; margin-top: 8px; }
-.phone-row { display: flex; align-items: center; }
-.phone-prefix {
-  background: #f0f0f0;
-  border: 1px solid #ccc;
-  border-right: none;
-  padding: 8px 10px;
-  border-radius: 4px 0 0 4px;
-  font-size: 0.95rem;
-  white-space: nowrap;
+.auth-card {
+  width: 520px;
 }
-.phone-row input { border-radius: 0 4px 4px 0; }
-.pw-row { display: flex; align-items: center; }
-.pw-row input { flex: 1; border-radius: 4px 0 0 4px; }
-.eye-btn {
-  background: #f0f0f0;
-  border: 1px solid #ccc;
-  border-left: none;
-  padding: 8px 10px;
-  border-radius: 0 4px 4px 0;
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
+.title {
+  text-align: center;
+  margin: 0 0 24px;
+  color: #303133;
 }
-.error { color: red; }
+.link {
+  text-align: center;
+  margin-top: 16px;
+  color: #606266;
+  font-size: 0.9rem;
+}
 </style>

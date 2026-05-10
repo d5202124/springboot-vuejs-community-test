@@ -1,91 +1,108 @@
 <template>
   <div>
-    <h2>最新發文</h2>
-
-    <div v-if="toast.message" :class="['toast', toast.type]">{{ toast.message }}</div>
-
     <!-- 發文表單 -->
-    <section class="post-form">
-      <h3>新增發文</h3>
-      <form @submit.prevent="submitPost">
-        <textarea v-model="newPost.content" placeholder="寫點什麼..." required></textarea>
-        <input v-model="newPost.image" placeholder="圖片 URL（選填）" />
-        <button type="submit" :disabled="submittingPost">{{ submittingPost ? '發送中...' : '發文' }}</button>
-      </form>
-    </section>
+    <el-card class="post-form-card">
+      <el-form @submit.prevent="submitPost">
+        <el-input
+          v-model="newPost.content"
+          type="textarea"
+          :rows="4"
+          placeholder="寫點什麼..."
+          resize="none"
+        />
+        <el-input v-model="newPost.image" placeholder="圖片 URL（選填）" style="margin-top:8px" />
+        <div style="text-align:right; margin-top:8px">
+          <el-button type="primary" :loading="submittingPost" @click="submitPost">發文</el-button>
+        </div>
+      </el-form>
+    </el-card>
 
-    <div v-if="loading" class="status-msg">載入中...</div>
-    <div v-else-if="loadError" class="status-msg error-msg">{{ loadError }}</div>
-    <div v-else-if="posts.length === 0" class="status-msg">目前還沒有任何貼文，來發第一篇吧！</div>
+    <!-- 載入狀態 -->
+    <div v-if="loading" style="text-align:center; padding:40px">
+      <el-skeleton :rows="4" animated />
+    </div>
+    <el-empty v-else-if="posts.length === 0" description="目前還沒有任何貼文，來發第一篇吧！" />
 
-    <!-- 貼文列表：v-for 迭代陣列，:key 幫助 Vue 追蹤每個元素的身份（必填） -->
-    <section v-else class="posts">
-      <article v-for="post in posts" :key="post.postId" class="post-card">
-
-        <!-- 貼文 meta 列：頭像、作者名稱、時間、編輯/刪除按鈕 -->
-        <div class="post-meta">
-          <!-- v-if：只有帳號有設定封面圖才顯示頭像 -->
-          <img v-if="post.coverImage" :src="post.coverImage" class="avatar" alt="頭像" />
+    <!-- 貼文列表 -->
+    <el-card v-for="post in posts" :key="post.postId" class="post-card">
+      <!-- 貼文 meta -->
+      <div class="post-meta">
+        <el-avatar :src="post.coverImage || ''" :size="48">
+          {{ post.userName?.charAt(0) }}
+        </el-avatar>
+        <div class="post-meta-info">
           <strong>{{ post.userName }}</strong>
           <span class="post-time">{{ formatDate(post.createdAt) }}</span>
-          <!-- 只有自己的貼文才顯示編輯/刪除按鈕 -->
-          <div v-if="post.userId === currentUserId" class="post-actions">
-            <button class="icon-btn" @click="editPost(post)" title="編輯">✏</button>
-            <button class="icon-btn" @click="confirmDeletePost(post.postId)" title="刪除">🗑</button>
-          </div>
         </div>
-
-        <div v-if="editId === post.postId" class="edit-form">
-          <form @submit.prevent="updatePost(post.postId)">
-            <textarea v-model="editPostData.content" required></textarea>
-            <input v-model="editPostData.image" placeholder="圖片 URL" />
-            <button type="submit">儲存</button>
-            <button type="button" @click="cancelEdit">取消</button>
-          </form>
+        <!-- 只有自己的貼文才顯示編輯/刪除按鈕 -->
+        <div v-if="post.userId === currentUserId" class="post-actions">
+          <el-button size="small" text @click="editPost(post)">編輯</el-button>
+          <el-button size="small" text type="danger" @click="confirmDeletePost(post.postId)">刪除</el-button>
         </div>
-        <div v-else>
-          <!-- white-space: pre-wrap（CSS 中設定）保留換行與空白，維持原始排版 -->
-          <p class="post-content">{{ post.content }}</p>
-          <img v-if="post.image" :src="post.image" alt="貼文圖片" class="post-img" />
+      </div>
+
+      <!-- 編輯模式 / 一般顯示 -->
+      <div v-if="editId === post.postId" class="edit-form">
+        <el-input v-model="editPostData.content" type="textarea" :rows="3" resize="none" />
+        <el-input v-model="editPostData.image" placeholder="圖片 URL" style="margin-top:8px" />
+        <div style="margin-top:8px; display:flex; gap:8px">
+          <el-button type="primary" size="small" @click="updatePost(post.postId)">儲存</el-button>
+          <el-button size="small" @click="cancelEdit">取消</el-button>
         </div>
+      </div>
+      <div v-else>
+        <!-- white-space: pre-wrap（CSS 中設定）保留換行與空白，維持原始排版 -->
+        <p class="post-content">{{ post.content }}</p>
+        <img v-if="post.image" :src="post.image" class="post-img" alt="貼文圖片" />
+      </div>
 
-        <!-- 留言區塊 -->
-        <div class="comment-box">
-          <h4>留言</h4>
-          <form @submit.prevent="submitComment(post.postId)">
-            <textarea v-model="commentMap[post.postId]" placeholder="新增留言..." required></textarea>
-            <button type="submit">送出</button>
-          </form>
-
-          <!-- comments[post.postId] 是該貼文的留言陣列，透過 v-if 確認有資料才渲染 -->
-          <div v-if="comments[post.postId]">
-            <div v-for="comment in comments[post.postId]" :key="comment.commentId" class="comment-item">
-              <div class="comment-header">
-                <small><strong>{{ comment.userName }}</strong> · {{ formatDate(comment.createdAt) }}</small>
-                <!-- 只有自己的留言才顯示編輯/刪除按鈕 -->
-                <div v-if="comment.userId === currentUserId" class="comment-actions">
-                  <button class="icon-btn-sm" @click="editComment(comment)" title="編輯">✏</button>
-                  <button class="icon-btn-sm" @click="confirmDeleteComment(comment)" title="刪除">🗑</button>
-                </div>
+      <!-- 留言區塊 -->
+      <div class="comment-box">
+        <el-divider />
+        <div v-if="comments[post.postId]">
+          <div v-for="comment in comments[post.postId]" :key="comment.commentId" class="comment-item">
+            <div class="comment-header">
+              <span class="comment-author">{{ comment.userName }}</span>
+              <span class="comment-time">{{ formatDate(comment.createdAt) }}</span>
+              <!-- 只有自己的留言才顯示編輯/刪除按鈕 -->
+              <div v-if="comment.userId === currentUserId" class="comment-actions">
+                <el-button size="small" text @click="editComment(comment)">編輯</el-button>
+                <el-button size="small" text type="danger" @click="confirmDeleteComment(comment)">刪除</el-button>
               </div>
-              <!-- 留言編輯模式，同貼文邏輯：editCommentId 對上才顯示編輯框 -->
-              <div v-if="editCommentId === comment.commentId">
-                <textarea v-model="editCommentContent"></textarea>
-                <button @click="updateComment(comment.commentId, comment.postId)">儲存</button>
-                <button @click="cancelCommentEdit">取消</button>
-              </div>
-              <p v-else class="comment-content">{{ comment.content }}</p>
             </div>
+            <!-- 留言編輯模式，同貼文邏輯：editCommentId 對上才顯示編輯框 -->
+            <div v-if="editCommentId === comment.commentId" style="margin-top:6px">
+              <el-input v-model="editCommentContent" type="textarea" :rows="2" resize="none" />
+              <div style="margin-top:6px; display:flex; gap:8px">
+                <el-button type="primary" size="small" @click="updateComment(comment.commentId, comment.postId)">儲存</el-button>
+                <el-button size="small" @click="cancelCommentEdit">取消</el-button>
+              </div>
+            </div>
+            <p v-else class="comment-content">{{ comment.content }}</p>
           </div>
         </div>
 
-      </article>
-    </section>
+        <!-- 留言輸入框 -->
+        <div class="comment-input-row">
+          <el-input
+            v-model="commentMap[post.postId]"
+            placeholder="新增留言..."
+            size="small"
+            style="flex:1"
+          />
+          <el-button size="small" type="primary" plain @click="submitComment(post.postId)">送出</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 錯誤提示 -->
+    <el-alert v-if="loadError" :title="loadError" type="error" show-icon :closable="false" style="margin-top:12px" />
   </div>
 </template>
 
 <script>
 import api from '../api';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
   data() {
@@ -93,19 +110,17 @@ export default {
       // Number() 轉型：localStorage 讀出的值是字串，需轉成數字才能與 post.userId 比對
       currentUserId: Number(localStorage.getItem('userId')) || null,
 
-      posts: [],           // 所有貼文的陣列
-      loading: false,      // 是否正在載入貼文
-      loadError: '',       // 載入失敗時的錯誤訊息
-      submittingPost: false,  // 是否正在發文（防止重複送出）
+      posts: [],
+      loading: false,
+      loadError: '',
+      submittingPost: false,
 
-      toast: { message: '', type: 'ok' },  // type: 'ok' 綠色成功 / 'error' 紅色失敗
+      newPost: { content: '', image: '' },
+      editId: null,
+      editPostData: { content: '', image: '' },
 
-      newPost: { content: '', image: '' },       // 新發文的輸入欄位
-      editId: null,                               // 目前正在編輯的貼文 postId
-      editPostData: { content: '', image: '' },   // 編輯中的貼文資料
-
-      editCommentId: null,       // 目前正在編輯的留言 commentId
-      editCommentContent: '',    // 編輯中的留言內容
+      editCommentId: null,
+      editCommentContent: '',
 
       commentMap: {},  // { [postId]: '輸入中的留言文字' }，每篇貼文的輸入框各自獨立
       comments: {},    // { [postId]: [留言陣列] }
@@ -117,11 +132,6 @@ export default {
   },
 
   methods: {
-    showToast(message, type = 'ok') {
-      this.toast = { message, type };
-      setTimeout(() => { this.toast.message = ''; }, 3000);
-    },
-
     // 載入所有貼文，並同時載入每篇貼文的留言
     async loadPosts() {
       this.loading = true;
@@ -145,6 +155,7 @@ export default {
 
     // 發文
     async submitPost() {
+      if (!this.newPost.content.trim()) return;
       this.submittingPost = true;
       try {
         // userId 不需手動傳入，後端從 JWT 取得（SecurityUtils.getCurrentUserId）
@@ -152,9 +163,9 @@ export default {
         this.newPost.content = '';
         this.newPost.image = '';
         await this.loadPosts();  // 重新載入，讓新貼文出現在列表中
-        this.showToast('發文成功');
+        ElMessage.success('發文成功');
       } catch (e) {
-        this.showToast(e.response?.data || '發文失敗，請稍後再試', 'error');
+        ElMessage.error(e.response?.data || '發文失敗，請稍後再試');
       } finally {
         this.submittingPost = false;
       }
@@ -178,25 +189,25 @@ export default {
         await api.updatePost(postId, { content: this.editPostData.content, image: this.editPostData.image });
         this.cancelEdit();
         await this.loadPosts();
-        this.showToast('貼文已更新');
+        ElMessage.success('貼文已更新');
       } catch (e) {
-        this.showToast(e.response?.data || '更新失敗', 'error');
+        ElMessage.error(e.response?.data || '更新失敗');
       }
     },
 
     // 刪除前先顯示確認對話框，避免誤操作
-    confirmDeletePost(postId) {
-      if (!window.confirm('確定要刪除這篇貼文嗎？')) return;
-      this.deletePost(postId);
-    },
-
-    async deletePost(postId) {
+    async confirmDeletePost(postId) {
       try {
+        await ElMessageBox.confirm('確定要刪除這篇貼文嗎？', '刪除確認', {
+          confirmButtonText: '刪除',
+          cancelButtonText: '取消',
+          type: 'warning',
+        });
         await api.deletePost(postId);
         await this.loadPosts();
-        this.showToast('貼文已刪除');
+        ElMessage.success('貼文已刪除');
       } catch (e) {
-        this.showToast(e.response?.data || '刪除失敗', 'error');
+        if (e !== 'cancel') ElMessage.error(e.response?.data || '刪除失敗');
       }
     },
 
@@ -214,14 +225,14 @@ export default {
     // 送出留言
     async submitComment(postId) {
       const content = this.commentMap[postId];
-      if (!content) return;  // 空白留言不送出
+      if (!content?.trim()) return;
       try {
         await api.createComment({ postId, content });
         this.commentMap[postId] = '';  // 清空該貼文的留言輸入框
         await this.loadComments(postId);
-        this.showToast('留言成功');
+        ElMessage.success('留言成功');
       } catch (e) {
-        this.showToast(e.response?.data || '留言失敗', 'error');
+        ElMessage.error(e.response?.data || '留言失敗');
       }
     },
 
@@ -242,24 +253,24 @@ export default {
         await api.updateComment(commentId, { content: this.editCommentContent });
         this.cancelCommentEdit();
         await this.loadComments(postId);
-        this.showToast('留言已更新');
+        ElMessage.success('留言已更新');
       } catch (e) {
-        this.showToast(e.response?.data || '更新失敗', 'error');
+        ElMessage.error(e.response?.data || '更新失敗');
       }
     },
 
-    confirmDeleteComment(comment) {
-      if (!window.confirm('確定要刪除這則留言嗎？')) return;
-      this.deleteComment(comment);
-    },
-
-    async deleteComment(comment) {
+    async confirmDeleteComment(comment) {
       try {
+        await ElMessageBox.confirm('確定要刪除這則留言嗎？', '刪除確認', {
+          confirmButtonText: '刪除',
+          cancelButtonText: '取消',
+          type: 'warning',
+        });
         await api.deleteComment(comment.commentId);
         await this.loadComments(comment.postId);
-        this.showToast('留言已刪除');
+        ElMessage.success('留言已刪除');
       } catch (e) {
-        this.showToast(e.response?.data || '刪除失敗', 'error');
+        if (e !== 'cancel') ElMessage.error(e.response?.data || '刪除失敗');
       }
     },
   },
@@ -267,104 +278,50 @@ export default {
 </script>
 
 <style scoped>
-/* Toast 固定在右上角，z-index 確保浮在所有內容之上 */
-.toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 12px 20px;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 0.9rem;
-  z-index: 9999;
-  background: #4caf50;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+.post-form-card {
+  margin-bottom: 24px;
 }
-.toast.error {
-  background: #e53935;
-}
-.status-msg {
-  text-align: center;
-  padding: 32px;
-  color: #888;
-}
-.error-msg {
-  color: #e53935;
-}
-.post-form,
 .post-card {
-  border: 1px solid #ddd;
-  padding: 16px;
-  margin-bottom: 16px;
-  border-radius: 8px;
+  margin-bottom: 20px;
 }
 .post-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.post-meta-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .post-time {
-  color: #888;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  color: #909399;
 }
 .post-actions {
-  margin-left: auto;  /* 把編輯/刪除按鈕推到最右側 */
+  display: flex;
+  gap: 4px;
 }
-/* white-space: pre-wrap：保留換行符號和空白，維持原始文字排版 */
 .post-content {
   white-space: pre-wrap;
+  margin: 0 0 12px;
+  color: #303133;
+  line-height: 1.8;
+  font-size: 1.1rem;
 }
-/* object-fit: contain：縮放圖片使其完整顯示在框內，不裁切 */
 .post-img {
   max-width: 100%;
   max-height: 400px;
   object-fit: contain;
-  display: block;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-top: 8px;
 }
-/* 頭像：圓形裁切，使用 object-fit: cover 讓圖片填滿圓形 */
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-.edit-form textarea,
-.edit-form input {
-  width: 100%;
+.edit-form {
   margin-bottom: 8px;
-  box-sizing: border-box;
-}
-.icon-btn {
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.icon-btn:hover {
-  background: #f0f0f0;
-}
-.icon-btn-sm {
-  background: none;
-  border: none;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-.icon-btn-sm:hover {
-  background: #f0f0f0;
 }
 .comment-box {
-  margin-top: 16px;
-  border-top: 1px solid #eee;
-  padding-top: 12px;
+  margin-top: 4px;
 }
 .comment-item {
   padding: 8px 0;
@@ -373,29 +330,32 @@ export default {
 .comment-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 4px;
+}
+.comment-author {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #303133;
+}
+.comment-time {
+  font-size: 0.85rem;
+  color: #909399;
+  flex: 1;
 }
 .comment-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 .comment-content {
-  margin: 4px 0 0 0;
-  white-space: pre-wrap;  /* 同貼文：保留留言原始排版 */
+  margin: 0;
+  font-size: 1rem;
+  color: #606266;
+  white-space: pre-wrap;
 }
-textarea {
-  width: 100%;
-  min-height: 72px;
-  padding: 8px;
-  box-sizing: border-box;
-  margin-bottom: 8px;
-  resize: none;
-}
-input {
-  width: 100%;
-  padding: 8px;
-  box-sizing: border-box;
-  margin-bottom: 8px;
+.comment-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 </style>

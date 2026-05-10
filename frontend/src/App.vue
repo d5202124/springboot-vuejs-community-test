@@ -1,19 +1,19 @@
 <template>
-  <div class="app-container">
-    <header>
-      <!-- 點擊標題回首頁，已登入導向貼文列表否則導向登入頁 -->
-      <h1 @click="goHome" class="logo">玉山社群</h1>
-      <!-- 只有登入後才顯示使用者資訊列 -->
+  <el-container class="layout">
+    <el-header class="header">
+      <span class="logo" @click="goHome">社群平台</span>
       <div v-if="userName" class="user-info">
-        <span>{{ userName }}</span>
-        <button @click="$router.push('/profile')">個人資料</button>
-        <button @click="logout">登出</button>
+        <span class="username">{{ userName }}</span>
+        <el-button size="small" @click="$router.push('/profile')">個人資料</el-button>
+        <el-button size="small" type="danger" plain @click="logout">登出</el-button>
       </div>
-    </header>
+    </el-header>
 
-    <!-- @loggedIn / @profileUpdated：子頁面更新後通知 App.vue 同步 header 名稱 -->
-    <router-view @loggedIn="onLoggedIn" @profileUpdated="onProfileUpdated" />
-  </div>
+    <el-main class="main">
+      <!-- @loggedIn / @profileUpdated：子頁面更新後通知 App.vue 同步 header 名稱 -->
+      <router-view @loggedIn="onLoggedIn" @profileUpdated="onProfileUpdated" />
+    </el-main>
+  </el-container>
 </template>
 
 <script>
@@ -51,32 +51,45 @@ export default {
 </script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-}
-.app-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px;
-}
-header {
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #f4f6f8; font-size: 16px; }
+
+.layout { min-height: 100vh; }
+
+.header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 16px;
+  justify-content: space-between;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+  padding: 0 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
+
 .logo {
-  cursor: pointer;
-  margin: 0;
-}
-.user-info span {
-  margin-right: 12px;
+  font-size: 1.2rem;
   font-weight: bold;
-}
-button {
-  margin: 0 4px;
+  color: #409eff;
   cursor: pointer;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.username {
+  font-size: 0.9rem;
+  color: #606266;
+  margin-right: 4px;
+}
+
+.main {
+  width: 50%;
+  margin: 0 auto;
+  padding: 36px 0;
 }
 </style>

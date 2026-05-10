@@ -1,57 +1,47 @@
 <template>
-  <div class="auth-box">
-    <h2>註冊帳號</h2>
-    <!-- @submit.prevent 攔截原生表單提交，交由 register() 處理 -->
-    <form @submit.prevent="register">
-      <div>
-        <label>姓名</label>
-        <input v-model="form.userName" required />
-      </div>
+  <div class="auth-wrap">
+    <el-card class="auth-card">
+      <h2 class="title">註冊帳號</h2>
+      <el-form @submit.prevent="register">
+        <el-form-item label="姓名">
+          <el-input v-model="form.userName" required />
+        </el-form-item>
 
-      <div>
-        <label>手機號碼</label>
-        <!-- 固定顯示「09」前綴，使用者只輸入後 8 碼數字 -->
-        <div class="phone-row">
-          <span class="phone-prefix">09</span>
-          <input
-            v-model="phoneSuffix"
-            type="tel"
-            maxlength="8"
-            placeholder="12345678"
-            required
-          />
-        </div>
-      </div>
+        <el-form-item label="手機號碼">
+          <!-- 固定顯示「09」前綴，使用者只輸入後 8 碼數字 -->
+          <el-input v-model="phoneSuffix" type="tel" maxlength="8" placeholder="12345678">
+            <template #prepend>09</template>
+          </el-input>
+        </el-form-item>
 
-      <div>
-        <label>密碼</label>
-        <div class="pw-row">
+        <el-form-item label="密碼">
           <!-- :type 動態綁定：showPassword 為true時顯示 -->
-          <input v-model="form.password" :type="showPassword ? 'text' : 'password'" required />
-          <button type="button" class="eye-btn" @click="showPassword = !showPassword">
-            {{ showPassword ? '🙈' : '👁' }}
-          </button>
-        </div>
-        <small class="hint">至少8碼，須含大寫、小寫英文與數字，不含特殊符號</small>
-      </div>
+          <el-input v-model="form.password" :type="showPassword ? 'text' : 'password'"
+            :suffix-icon="showPassword ? 'Hide' : 'View'"
+            @click-suffix="showPassword = !showPassword" />
+          <div class="hint">至少8碼，須含大寫、小寫英文與數字，不含特殊符號</div>
+        </el-form-item>
 
-      <div>
-        <label>確認密碼</label>
-        <div class="pw-row">
-          <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'" required />
-          <button type="button" class="eye-btn" @click="showConfirm = !showConfirm">
-            {{ showConfirm ? '🙈' : '👁' }}
-          </button>
-        </div>
-      </div>
+        <el-form-item label="確認密碼">
+          <el-input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'"
+            :suffix-icon="showConfirm ? 'Hide' : 'View'"
+            @click-suffix="showConfirm = !showConfirm" />
+        </el-form-item>
 
-      <div><label>封面圖片 URL（選填）</label><input v-model="form.coverImage" /></div>
-      <div><label>個人簡介（選填）</label><textarea v-model="form.biography"></textarea></div>
+        <el-form-item label="封面圖片 URL（選填）">
+          <el-input v-model="form.coverImage" />
+        </el-form-item>
 
-      <button type="submit">註冊</button>
-      <p v-if="message" :class="success ? 'ok' : 'error'">{{ message }}</p>
-    </form>
-    <p>已有帳號？<router-link to="/login">登入</router-link></p>
+        <el-form-item label="個人簡介（選填）">
+          <el-input v-model="form.biography" type="textarea" :rows="3" />
+        </el-form-item>
+
+        <el-button type="primary" style="width:100%" @click="register">註冊</el-button>
+        <el-alert v-if="message" :title="message" :type="success ? 'success' : 'error'"
+          show-icon :closable="false" style="margin-top:12px" />
+      </el-form>
+      <p class="link">已有帳號？<router-link to="/login">登入</router-link></p>
+    </el-card>
   </div>
 </template>
 
@@ -117,72 +107,28 @@ export default {
 </script>
 
 <style scoped>
-.auth-box {
-  max-width: 400px;
-  margin: 40px auto;
-  padding: 24px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-form > div {
-  margin-bottom: 12px;
-}
-label {
-  display: block;
-  margin-bottom: 4px;
-}
-input, textarea {
-  width: 100%;
-  padding: 8px;
-  box-sizing: border-box;
-  resize: none;
-}
-button[type="submit"] {
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-}
-.phone-row {
+.auth-wrap {
   display: flex;
-  align-items: center;
-  gap: 0;
+  justify-content: center;
+  padding-top: 40px;
 }
-.phone-prefix {
-  background: #f0f0f0;
-  border: 1px solid #ccc;
-  border-right: none;
-  padding: 8px 10px;
-  border-radius: 4px 0 0 4px;
-  font-size: 0.95rem;
-  white-space: nowrap;
+.auth-card {
+  width: 580px;
 }
-.phone-row input {
-  border-radius: 0 4px 4px 0;
-}
-.pw-row {
-  display: flex;
-  align-items: center;
-}
-.pw-row input {
-  flex: 1;
-  border-radius: 4px 0 0 4px;
-}
-.eye-btn {
-  background: #f0f0f0;
-  border: 1px solid #ccc;
-  border-left: none;
-  padding: 8px 10px;
-  border-radius: 0 4px 4px 0;
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
+.title {
+  text-align: center;
+  margin: 0 0 24px;
+  color: #303133;
 }
 .hint {
-  color: #888;
   font-size: 0.78rem;
-  display: block;
+  color: #909399;
   margin-top: 4px;
 }
-.error { color: red; }
-.ok { color: green; }
+.link {
+  text-align: center;
+  margin-top: 16px;
+  color: #606266;
+  font-size: 0.9rem;
+}
 </style>
