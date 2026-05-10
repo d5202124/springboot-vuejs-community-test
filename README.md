@@ -79,14 +79,25 @@ mysql -u root -p < backend/DB/db_setup.sql
 
 ### 後端啟動 / Backend
 
+啟動前需設定以下環境變數：
+
+**Windows (PowerShell)**
+```powershell
+$env:DB_PASSWORD = "your_db_password"
+$env:JWT_SECRET  = "your_jwt_secret_at_least_64_chars"
+```
+
+**Mac / Linux**
+```bash
+export DB_PASSWORD=your_db_password
+export JWT_SECRET=your_jwt_secret_at_least_64_chars
+```
+
 ```bash
 cd backend
 mvn spring-boot:run
 # 服務啟動於 http://localhost:8080
 ```
-
-> 預設使用 `application.yml` 內的連線設定；正式環境請以環境變數覆蓋：
-> `DB_PASSWORD` · `JWT_SECRET`
 
 ### 前端啟動 / Frontend
 
